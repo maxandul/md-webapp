@@ -1,6 +1,0 @@
-﻿Gespraechs_ID,MA_PersonalNr,FK_PersonalNr,Datum,Status,Ziele_2025,Entwicklung,Feedback,PDF_Pfad,Erstellt_am,Geaendert_am
-1,12345,67890,2025-02-15,Geplant,,,,,2025-01-15 10:00:00,2025-01-15 10:00:00
-2,11111,67890,2025-03-01,In Bearbeitung,"Projekt X leiten
-Team aufbauen",Führungskompetenzen stärken,Sehr gute Teamarbeit im letzten Jahr,,2025-01-20 14:30:00,2025-01-25 16:45:00
-3,22222,99999,2025-02-20,Geplant,,,,,2025-01-18 09:15:00,2025-01-18 09:15:00
-4,33333,99999,2025-03-10,Geplant,,,,,2025-01-22 11:00:00,2025-01-22 11:00:00
