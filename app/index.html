@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitarbeitergespräche - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="header-box">
+            <h1>Mitarbeitergespräche 2025</h1>
+            <p class="subtitle">Kanton Zürich</p>
+        </div>
+        
+        <div class="login-form">
+            <p class="info-text">Bitte geben Sie Ihren persönlichen Zugangs-Token ein:</p>
+            
+            <input 
+                type="password" 
+                id="tokenInput" 
+                placeholder="FK12345_xxxxxxxxxxxxxxxx"
+                autocomplete="off"
+            >
+            
+            <button id="loginBtn" onclick="handleLogin()">Anmelden</button>
+            
+            <div id="errorMsg" class="error-message"></div>
+        </div>
+        
+        <div class="info-box">
+            <p>💡 Sie haben Ihren Token per Email erhalten.</p>
+            <p>📧 Bei Fragen: <a href="mailto:hr@zh.ch">hr@zh.ch</a></p>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-Login wenn Token im URL
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            
+            if (token) {
+                document.getElementById('tokenInput').value = token;
+                handleLogin();
+            }
+        });
+        
+        // Enter-Taste Support
+        document.getElementById('tokenInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleLogin();
+            }
+        });
+        
+        async function handleLogin() {
+            const token = document.getElementById('tokenInput').value.trim();
+            const errorDiv = document.getElementById('errorMsg');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            if (!token) {
+                errorDiv.textContent = '❌ Bitte Token eingeben';
+                return;
+            }
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Validiere...';
+            errorDiv.textContent = '';
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token: token })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Token und User-Daten speichern
+                    sessionStorage.setItem('app_token', token);
+                    sessionStorage.setItem('user_data', JSON.stringify(data.user));
+                    
+                    // Weiterleiten
+                    window.location.href = 'dashboard.html';
+                } else {
+                    errorDiv.textContent = '❌ ' + (data.error || 'Ungültiger Token');
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Anmelden';
+                }
+                
+            } catch (error) {
+                console.error('Login-Fehler:', error);
+                errorDiv.textContent = '❌ Verbindungsfehler zum Server';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Anmelden';
+            }
+        }
+    </script>
+</body>
+</html>

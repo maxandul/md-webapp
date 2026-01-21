@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gespräch bearbeiten</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body style="background: #f5f5f5;">
+    <div class="detail-container">
+        <a href="dashboard.html" class="back-link">← Zurück zur Übersicht</a>
+        
+        <!-- Header mit MA-Infos -->
+        <div class="detail-header">
+            <h1 id="maName">Lädt...</h1>
+            <div class="detail-meta">
+                <div class="detail-meta-item">
+                    <span>🆔</span>
+                    <span id="maPersonalNr"></span>
+                </div>
+                <div class="detail-meta-item">
+                    <span>📍</span>
+                    <span id="maAbteilung"></span>
+                </div>
+                <div class="detail-meta-item">
+                    <span id="statusBadge" class="status-badge">Geplant</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formular -->
+        <div class="detail-form">
+            <form id="gespraechForm" onsubmit="saveGespraech(event)">
+                
+                <!-- Datum -->
+                <div class="form-group">
+                    <label for="datum">Gesprächstermin *</label>
+                    <input type="date" id="datum" name="datum" required>
+                </div>
+
+                <!-- Status -->
+                <div class="form-group">
+                    <label for="status">Status *</label>
+                    <select id="status" name="status" required>
+                        <option value="Geplant">Geplant</option>
+                        <option value="In Bearbeitung">In Bearbeitung</option>
+                        <option value="Abgeschlossen">Abgeschlossen</option>
+                    </select>
+                </div>
+
+                <!-- Ziele 2025 -->
+                <div class="form-group">
+                    <label for="ziele">Ziele 2025</label>
+                    <textarea 
+                        id="ziele" 
+                        name="ziele" 
+                        placeholder="Welche Ziele wurden für 2025 vereinbart?"
+                        rows="6"
+                    ></textarea>
+                    <small class="form-hint">Tipp: Pro Zeile ein Ziel</small>
+                </div>
+
+                <!-- Entwicklungsfelder -->
+                <div class="form-group">
+                    <label for="entwicklung">Entwicklungsfelder</label>
+                    <textarea 
+                        id="entwicklung" 
+                        name="entwicklung" 
+                        placeholder="In welchen Bereichen möchte sich die/der Mitarbeitende weiterentwickeln?"
+                        rows="6"
+                    ></textarea>
+                </div>
+
+                <!-- Feedback -->
+                <div class="form-group">
+                    <label for="feedback">Feedback & Bemerkungen</label>
+                    <textarea 
+                        id="feedback" 
+                        name="feedback" 
+                        placeholder="Allgemeines Feedback, besondere Leistungen, etc."
+                        rows="6"
+                    ></textarea>
+                </div>
+
+                <!-- Actions -->
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="saveBtn">
+                        💾 Speichern
+                    </button>
+                    <button type="button" class="btn btn-success" id="pdfBtn" onclick="generatePDF()">
+                        📄 PDF erstellen
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='dashboard.html'">
+                        Abbrechen
+                    </button>
+                </div>
+
+                <div id="successMsg" class="success-message"></div>
+                <div id="errorMsg" class="error-message"></div>
+            </form>
+
+            <!-- Metadaten -->
+            <div class="meta-info">
+                <p id="erstelltAm"></p>
+                <p id="geaendertAm"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let currentGespraech = null;
+        let gespraechsId = null;
+
+        // Beim Laden
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (!checkAuth()) return;
+            
+            // Gesprächs-ID aus URL holen
+            const urlParams = new URLSearchParams(window.location.search);
+            gespraechsId = parseInt(urlParams.get('id'));
+            
+            if (!gespraechsId) {
+                showAlert('Keine Gesprächs-ID angegeben', 'error');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
+            
+            await loadGespraech(gespraechsId);
+        });
+
+        async function loadGespraech(id) {
+            try {
+                const token = getToken();
+                const response = await fetch(`/api/gespraeche/${id}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Gespräch nicht gefunden');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentGespraech = data.gespraech;
+                    fillForm(currentGespraech);
+                } else {
+                    throw new Error(data.error || 'Fehler beim Laden');
+                }
+                
+            } catch (error) {
+                console.error('Fehler:', error);
+                showAlert('Fehler beim Laden des Gesprächs', 'error');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+            }
+        }
+
+        function fillForm(gespraech) {
+            // Header
+            document.getElementById('maName').textContent = gespraech.MA_Name || 'Mitarbeitende';
+            document.getElementById('maPersonalNr').textContent = `Personalnummer: ${gespraech.MA_PersonalNr}`;
+            document.getElementById('maAbteilung').textContent = gespraech.MA_Abteilung || 'Keine Abteilung';
+            
+            // Status Badge
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.textContent = gespraech.Status;
+            statusBadge.className = 'status-badge status-' + getStatusClass(gespraech.Status);
+            
+            // Formular-Felder
+            document.getElementById('datum').value = gespraech.Datum || '';
+            document.getElementById('status').value = gespraech.Status || 'Geplant';
+            document.getElementById('ziele').value = gespraech.Ziele_2025 || '';
+            document.getElementById('entwicklung').value = gespraech.Entwicklung || '';
+            document.getElementById('feedback').value = gespraech.Feedback || '';
+            
+            // Metadaten
+            if (gespraech.Erstellt_am) {
+                document.getElementById('erstelltAm').textContent = 
+                    `Erstellt: ${formatDateTime(gespraech.Erstellt_am)}`;
+            }
+            if (gespraech.Geaendert_am) {
+                document.getElementById('geaendertAm').textContent = 
+                    `Zuletzt geändert: ${formatDateTime(gespraech.Geaendert_am)}`;
+            }
+        }
+
+        async function saveGespraech(event) {
+            event.preventDefault();
+            
+            const saveBtn = document.getElementById('saveBtn');
+            const successMsg = document.getElementById('successMsg');
+            const errorMsg = document.getElementById('errorMsg');
+            
+            successMsg.textContent = '';
+            errorMsg.textContent = '';
+            
+            // Daten sammeln
+            const formData = {
+                Datum: document.getElementById('datum').value,
+                Status: document.getElementById('status').value,
+                Ziele_2025: document.getElementById('ziele').value,
+                Entwicklung: document.getElementById('entwicklung').value,
+                Feedback: document.getElementById('feedback').value
+            };
+            
+            try {
+                saveBtn.disabled = true;
+                saveBtn.textContent = '💾 Speichert...';
+                
+                const token = getToken();
+                const response = await fetch(`/api/gespraeche/${gespraechsId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Fehler beim Speichern');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    successMsg.textContent = '✅ Erfolgreich gespeichert!';
+                    
+                    // Status Badge aktualisieren
+                    const statusBadge = document.getElementById('statusBadge');
+                    statusBadge.textContent = formData.Status;
+                    statusBadge.className = 'status-badge status-' + getStatusClass(formData.Status);
+                    
+                    // Scroll to top
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    throw new Error(data.error || 'Unbekannter Fehler');
+                }
+                
+            } catch (error) {
+                console.error('Fehler:', error);
+                errorMsg.textContent = '❌ ' + error.message;
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 Speichern';
+            }
+        }
+
+        async function generatePDF() {
+            const pdfBtn = document.getElementById('pdfBtn');
+            const successMsg = document.getElementById('successMsg');
+            const errorMsg = document.getElementById('errorMsg');
+            
+            successMsg.textContent = '';
+            errorMsg.textContent = '';
+            
+            try {
+                pdfBtn.disabled = true;
+                pdfBtn.textContent = '📄 Erstelle PDF...';
+                
+                const token = getToken();
+                const response = await fetch(`/api/gespraeche/${gespraechsId}/pdf`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Fehler bei PDF-Generierung');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    successMsg.textContent = '✅ PDF erfolgreich erstellt!';
+                    
+                    // PDF herunterladen
+                    window.open(data.download_url, '_blank');
+                } else {
+                    throw new Error(data.error || 'Unbekannter Fehler');
+                }
+                
+            } catch (error) {
+                console.error('Fehler:', error);
+                errorMsg.textContent = '❌ ' + error.message;
+            } finally {
+                pdfBtn.disabled = false;
+                pdfBtn.textContent = '📄 PDF erstellen';
+            }
+        }
+
+        function getStatusClass(status) {
+            const map = {
+                'Geplant': 'geplant',
+                'In Bearbeitung': 'bearbeitung',
+                'Abgeschlossen': 'abgeschlossen'
+            };
+            return map[status] || 'geplant';
+        }
+
+        function formatDateTime(dateTimeString) {
+            if (!dateTimeString) return '';
+            const date = new Date(dateTimeString);
+            return date.toLocaleString('de-CH', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    </script>
+</body>
+</html>
