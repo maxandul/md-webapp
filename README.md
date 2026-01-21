@@ -1,4 +1,4 @@
-# Mitarbeitergespräche Web-App
+# MD Web-App (Prototyp)
 
 Web-Applikation für die Verwaltung von Mitarbeitergesprächen im Kanton Zürich.
 
@@ -108,5 +108,6 @@ mitarbeitergespraeche/
 Kanton Zürich - HR Team
 
 ## Lizenz
+
 
 Intern - Nicht für öffentliche Nutzung
