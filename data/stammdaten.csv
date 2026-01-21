@@ -1,0 +1,6 @@
+﻿PersonalNr,Nachname,Vorname,Email,Abteilung,FK_PersonalNr
+12345,Müller,Anna,anna.mueller@zh.ch,IT,67890
+67890,Schmidt,Peter,peter.schmidt@zh.ch,HR,99999
+11111,Weber,Sarah,sarah.weber@zh.ch,IT,67890
+22222,Fischer,Thomas,thomas.fischer@zh.ch,Finanzen,99999
+33333,Meyer,Lisa,lisa.meyer@zh.ch,HR,99999
